@@ -94,7 +94,7 @@ load_records() {
     echo "-------------------------------------------------------------------------------------"
 
     # Read and format each record
-    while IFS='|' read -r timestamp player_score computer_score attempts difficulty theme; do
+    while IFS='|' read -r timestamp player_score computer_score difficulty theme; do
         echo -e "$timestamp\t$player_score\t$computer_score\t\t$difficulty\t\t$theme"
     done < "$RECORDS_FILE"
 }
@@ -285,7 +285,7 @@ play_game() {
         if [[ $attempts -gt 0 ]]; then
             echo "You have $attempts attempts remaining."
             echo "Let's try again with a new shape."
-            continue  # Skip to next iteration to get a new shape
+            continue 
         fi
     elif [[ ${user_guess,,} == ${random_shape,,} ]]; then
         echo "Correct! You identified the shape."
@@ -293,7 +293,8 @@ play_game() {
         
         # Computer's turn only happens after correct user guess
         echo -e "\nComputer's turn to guess..."
-        sleep 1  # Simulate computer thinking
+        # Simulate computer thinking
+        sleep 1  
         comp_guess=${shapes[$((RANDOM % ${#shapes[@]}))]}
         echo "Computer guessed: $comp_guess"
         if [[ $comp_guess == $random_shape ]]; then
@@ -313,7 +314,6 @@ play_game() {
         fi
     fi
     
-    # Remove the separate computer's turn section since it's now handled above
     # Check if player is out of attempts
     if [[ $attempts -le 0 ]]; then
         echo "Game over! Final Scores - Player|Computer: $player_score | $computer_score"
@@ -323,26 +323,24 @@ play_game() {
         break
     fi
         
-        # save_record $player_score $computer_score $attempts "$DIFFICULTY" "$THEME"
         
-        # Replay option
-        while true; do
-            read -p "Do you want to play again? (y/n): " choice
-            if [[ ${choice^} == "Y" || ${choice^} == "N" ]]; then
-                break
-            else
-                echo "Invalid input. Please enter 'y' or 'n'."
-            fi
-        done
-
-        if [[ ${choice^} != "Y" ]]; then
-            echo "Thanks for playing! Final Scores - Player|Computer: $player_score | $computer_score"
-            echo "Returning to main menu..."
-        	save_record $player_score $computer_score $attempts "$DIFFICULTY" "$THEME"
-            sleep 2
-            return
+    # Replay option
+    while true; do
+        read -p "Do you want to play again? (y/n): " choice
+        if [[ ${choice^} == "Y" || ${choice^} == "N" ]]; then
+            break
+        else
+            echo "Invalid input. Please enter 'y' or 'n'."
         fi
-        attempts=3  # Reset attempts for new game
+    done
+
+    if [[ ${choice^} != "Y" ]]; then
+        echo "Thanks for playing! Final Scores - Player|Computer: $player_score | $computer_score"
+        echo "Returning to main menu..."
+    	save_record $player_score $computer_score $attempts "$DIFFICULTY" "$THEME"
+        sleep 2
+        return
+    fi
     done
 }
 
