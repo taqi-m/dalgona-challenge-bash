@@ -60,6 +60,11 @@ display_shape()
 validate_input() 
 {
     local input=$1
+    # Check for exit command first
+    if [[ ${input,,} == "exit" ]]; then
+        return 2  # Special return code for exit
+    fi
+    
     for shape in "${shapes[@]}"; do
         if [[ ${input,,} == ${shape,,} ]]; then
             return 0  # Input is valid
@@ -176,42 +181,39 @@ select_theme() {
 
 # Function to display main menu
 display_main_menu() {
-    clear
-    echo -e "Welcome to the"
-    figlet -f digital "Shape Challenge!"
-    echo -e "\nCurrent Settings:"
-    echo -e "Theme: $THEME | Difficulty: $DIFFICULTY (${TIME_LIMIT}s)"
-    echo -e "\nMAIN MENU:"
-    echo "1) Play Game"
-    echo "2) Select Difficulty"
-    echo "3) Select Theme"
-    echo "4) View Records"
-    echo "5) Exit Game"
     
     while true; do
+		clear
+		echo -e "Welcome to the"
+		figlet -f digital "Shape Challenge!"
+		echo -e "\nCurrent Settings:"
+		echo -e "Theme: $THEME | Difficulty: $DIFFICULTY (${TIME_LIMIT}s)"
+		echo -e "\nMAIN MENU:"
+		echo "1) Play Game"
+		echo "2) Select Difficulty"
+		echo "3) Select Theme"
+		echo "4) View Records"
+		echo "5) Exit Game"
         read -p "Enter your choice (1-5): " menu_choice
         case $menu_choice in
             1)
-                return
+                return 1
                 ;;
             2)
                 select_difficulty
                 echo -e "\nPress Enter to return to the main menu..."
                 read
-                display_main_menu
                 ;;
             3)
                 select_theme
                 echo -e "\nPress Enter to return to the main menu..."
                 read
-                display_main_menu
                 ;;
             4)
                 clear
                 load_records
                 echo -e "\nPress Enter to return to the main menu..."
                 read
-                display_main_menu
                 ;;
             5)
                 echo "Thanks for playing!"
@@ -222,6 +224,19 @@ display_main_menu() {
                 ;;
         esac
     done
+}
+
+# Function to handle game exit
+exit_game() {
+    local player_score=$1
+    local computer_score=$2
+    local attempts=$3
+    
+    echo "Game aborted! Final Scores - Player|Computer: $player_score | $computer_score"
+    save_record $player_score $computer_score $attempts "$DIFFICULTY" "$THEME"
+    echo -e "\nPress Enter to return to the main menu..."
+    read
+    return 1
 }
 
 # Main function to run the game
@@ -242,6 +257,7 @@ play_game() {
         echo "Theme: $THEME | Difficulty: $DIFFICULTY - You have $TIME_LIMIT seconds to respond"
         echo "You have $attempts attempts left to guess the shape."
         echo "Available shapes: ${shapes[*]}"
+        echo "Type 'exit' at any time to quit the game and return to the main menu."
 
         # Select a random shape
         random_index=$((RANDOM % ${#shapes[@]}))
@@ -252,100 +268,120 @@ play_game() {
         display_shape "$random_shape" "$THEME"
 
         # Prompt user for input with appropriate time limit
+        exit_requested=false
         while true; do
             echo -e "You have $TIME_LIMIT seconds to guess..."
             read -t $TIME_LIMIT -p "Guess the shape: " user_guess
             echo
+            
             if [[ -z $user_guess ]]; then
                 echo "Time's up! You didn't make a guess in time. Player eliminated!"
                 break
-            elif validate_input "$user_guess"; then
-                break  # Input is valid, exit the loop
+            fi
+            
+            validate_input "$user_guess"
+            validation_result=$?
+            
+            if [[ $validation_result -eq 2 ]]; then
+                # User wants to exit
+                exit_requested=true
+                break
+            elif [[ $validation_result -eq 0 ]]; then
+                # Valid shape input
+                break
             else
-                echo "Invalid shape! Please enter one of: ${shapes[*]}"
+                echo "Invalid shape! Please enter one of: ${shapes[*]} (or type 'exit' to quit)"
                 # Reset timer for another attempt
                 read -t $TIME_LIMIT -p "Guess the shape: " user_guess
                 if [[ -z $user_guess ]]; then
                     echo "Time's up! You didn't make a guess in time."
                     break
-                elif validate_input "$user_guess"; then
+                fi
+                
+                validate_input "$user_guess"
+                validation_result=$?
+                
+                if [[ $validation_result -eq 2 ]]; then
+                    # User wants to exit
+                    exit_requested=true
                     break
-                else 
+                elif [[ $validation_result -eq 0 ]]; then
+                    # Valid shape input
+                    break
+                else
                     echo "Invalid shape again! Player eliminated!"
                     break
                 fi
             fi
         done
+        
+        # Handle exit request
+        if [[ $exit_requested == true ]]; then
+            exit_game $player_score $computer_score $attempts
+            return
+        fi
 
         # Check user's answer
-    if [[ -z $user_guess ]]; then
-        echo "You didn't make a valid guess in time."
-        ((attempts--))
-        
-        if [[ $attempts -gt 0 ]]; then
-            echo "You have $attempts attempts remaining."
-            echo "Let's try again with a new shape."
-            continue 
-        fi
-    elif [[ ${user_guess,,} == ${random_shape,,} ]]; then
-        echo "Correct! You identified the shape."
-        ((player_score=player_score+1))
-        
-        # Computer's turn only happens after correct user guess
-        echo -e "\nComputer's turn to guess..."
-        # Simulate computer thinking
-        sleep 1  
-        comp_guess=${shapes[$((RANDOM % ${#shapes[@]}))]}
-        echo "Computer guessed: $comp_guess"
-        if [[ $comp_guess == $random_shape ]]; then
-            echo "Computer guessed correctly!"
-            ((computer_score=computer_score+1))
+        if [[ -z $user_guess ]]; then
+            echo "You didn't make a valid guess in time."
+            ((attempts--))
+            
+            if [[ $attempts -gt 0 ]]; then
+                echo "You have $attempts attempts remaining."
+                echo "Let's try again with a new shape."
+                continue 
+            fi
+        elif [[ ${user_guess,,} == ${random_shape,,} ]]; then
+            echo "Correct! You identified the shape."
+            ((player_score=player_score+1))
+            
+            # Computer's turn only happens after correct user guess
+            echo -e "\nComputer's turn to guess..."
+            # Simulate computer thinking
+            sleep 1  
+            comp_guess=${shapes[$((RANDOM % ${#shapes[@]}))]}
+            echo "Computer guessed: $comp_guess"
+            if [[ $comp_guess == $random_shape ]]; then
+                echo "Computer guessed correctly!"
+                ((computer_score=computer_score+1))
+                # Select a new shape for next round
+                sleep 1
+                continue
+            else
+                echo "Computer guessed wrong!"
+                # Select a new shape for next round
+                sleep 1
+                continue
+            fi
         else
-            echo "Computer guessed wrong!"
+            echo "Wrong guess! The correct answer was: $random_shape"
+            ((attempts--))
+            
+            if [[ $attempts -gt 0 ]]; then
+                echo "You have $attempts attempts remaining."
+                echo "Let's try again with a new shape."
+                continue  # Skip to next iteration to get a new shape
+            fi
         fi
-    else
-        echo "Wrong guess! The correct answer was: $random_shape"
-        ((attempts--))
         
-        if [[ $attempts -gt 0 ]]; then
-            echo "You have $attempts attempts remaining."
-            echo "Let's try again with a new shape."
-            continue  # Skip to next iteration to get a new shape
-        fi
-    fi
-    
-    # Check if player is out of attempts
-    if [[ $attempts -le 0 ]]; then
-        echo "Game over! Final Scores - Player|Computer: $player_score | $computer_score"
-        save_record $player_score $computer_score $attempts "$DIFFICULTY" "$THEME"
-        echo -e "\nPress Enter to continue..."
-        read
-        break
-    fi
-        
-        
-    # Replay option
-    while true; do
-        read -p "Do you want to play again? (y/n): " choice
-        if [[ ${choice^} == "Y" || ${choice^} == "N" ]]; then
+        # Check if player is out of attempts
+        if [[ $attempts -le 0 ]]; then
+            echo "Game over! Final Scores - Player|Computer: $player_score | $computer_score"
+            save_record $player_score $computer_score $attempts "$DIFFICULTY" "$THEME"
+            echo -e "\nPress Enter to continue..."
+            read
             break
-        else
-            echo "Invalid input. Please enter 'y' or 'n'."
         fi
-    done
-
-    if [[ ${choice^} != "Y" ]]; then
-        echo "Thanks for playing! Final Scores - Player|Computer: $player_score | $computer_score"
-        echo "Returning to main menu..."
-    	save_record $player_score $computer_score $attempts "$DIFFICULTY" "$THEME"
-        sleep 2
-        return
-    fi
     done
 }
 
 # Main program loop
 while true; do
     display_main_menu
-    play_game
+    ret_val=$?
+    
+    # Only play the game if return value is 1 (indicating option 1)
+    if [[ $ret_val -eq 1 ]]; then
+        play_game
+    fi
 done
