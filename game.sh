@@ -44,13 +44,13 @@ display_shape()
     else  # Harry Potter theme
         case $shape in
             "Wand")
-                cat elder_wand.txt
+                cat wand.txt
                 ;;
             "Stone")
-                cat resurrection_stone.txt
+                cat stone.txt
                 ;;
             "Cloak")
-                cat invisibility_cloak.txt
+                cat cloak.txt
                 ;;
         esac
     fi
@@ -75,10 +75,10 @@ save_record() {
     local attempts="$3"
     local difficulty="$4"
     local theme="$5"
-    local timestamp=$(date +"%Y-%m-%d %H:%M:%S")
+    local timestamp=$(date +"%H:%M:%S %d-%m-%Y")
 
     # Append data to the file in a structured format
-    echo "$timestamp|$player_score|$computer_score|$attempts|$difficulty|$theme" >> "$RECORDS_FILE"
+    echo "$timestamp|$player_score|$computer_score|$difficulty|$theme" >> "$RECORDS_FILE"
     echo "Record saved successfully!"
 }
 
@@ -90,12 +90,12 @@ load_records() {
     fi
 
     # Print table header
-    echo -e "Date & Time\t\tPlayer Score\tComputer Score\tAttempts\tDifficulty\tTheme"
+    echo -e "\tTime\t\tPlayer\tComputer\tDifficulty\tTheme"
     echo "-------------------------------------------------------------------------------------"
 
     # Read and format each record
     while IFS='|' read -r timestamp player_score computer_score attempts difficulty theme; do
-        echo -e "$timestamp\t$player_score\t\t$computer_score\t\t$attempts\t$difficulty\t$theme"
+        echo -e "$timestamp\t$player_score\t$computer_score\t\t$difficulty\t\t$theme"
     done < "$RECORDS_FILE"
 }
 
@@ -116,21 +116,18 @@ select_difficulty() {
                 TIME_LIMIT=$EASY_TIME
                 DIFFICULTY="Easy"
                 echo "Difficulty set to Easy!"
-                sleep 1
                 return
                 ;;
             2)
                 TIME_LIMIT=$MEDIUM_TIME
                 DIFFICULTY="Medium"
                 echo "Difficulty set to Medium!"
-                sleep 1
                 return
                 ;;
             3)
                 TIME_LIMIT=$HARD_TIME
                 DIFFICULTY="Hard"
                 echo "Difficulty set to Hard!"
-                sleep 1
                 return
                 ;;
             4)
@@ -159,14 +156,12 @@ select_theme() {
                 THEME="Squid Game"
                 shapes=("${SQUID_SHAPES[@]}")
                 echo "Theme set to Squid Game!"
-                sleep 1
                 return
                 ;;
             2)
                 THEME="Harry Potter"
                 shapes=("${HALLOWS_SHAPES[@]}")
                 echo "Theme set to Harry Potter!"
-                sleep 1
                 return
                 ;;
             3)
@@ -197,14 +192,18 @@ display_main_menu() {
         read -p "Enter your choice (1-5): " menu_choice
         case $menu_choice in
             1)
-                return 0  # Start the game
+                return
                 ;;
             2)
                 select_difficulty
+                echo -e "\nPress Enter to return to the main menu..."
+                read
                 display_main_menu
                 ;;
             3)
                 select_theme
+                echo -e "\nPress Enter to return to the main menu..."
+                read
                 display_main_menu
                 ;;
             4)
