@@ -13,6 +13,10 @@ TIME_LIMIT=$MEDIUM_TIME
 DIFFICULTY="Medium"
 THEME="Squid Game"
 
+# Paths to theme music
+HARRY_POTTER_MUSIC="/home/toobanadeem/harry-potter-hedwigs-theme.mp3"
+SQUID_GAME_MUSIC="/home/toobanadeem/SquidGameBgm.mp3"
+
 # Theme-specific shape arrays
 SQUID_SHAPES=("Circle" "Triangle" "Star" "Umbrella")
 HALLOWS_SHAPES=("Wand" "Stone" "Cloak")
@@ -145,6 +149,38 @@ select_difficulty() {
     done
 }
 
+# Function to start theme music
+start_music() {
+    pkill mpg123  > /dev/null 2>&1 # Stop any existing music and supress msgs
+    
+     # Reset volume to a neutral level before setting theme-specific volume
+    pactl set-sink-volume @DEFAULT_SINK@ 30% 
+    
+    if [[ "$THEME" == "Harry Potter" ]]; then
+        mpg123 -g --loop -1 "$HARRY_POTTER_MUSIC"> /dev/null 2>&1 &
+        pactl set-sink-volume @DEFAULT_SINK@ 125%  # Increase system volume
+        echo "Playing Harry Potter theme..."
+        
+    else
+        mpg123 -g --loop -1 "$SQUID_GAME_MUSIC" > /dev/null 2>&1 &
+        pactl set-sink-volume @DEFAULT_SINK@ 30%  # Reset system volume
+        echo "Playing Squid Game theme..."
+    fi
+}
+
+# Function to stop music and supress msgs
+stop_music() {
+    pkill mpg123 > /dev/null 2>&1
+}
+
+# Cleanup function to ensure music stops when the script exits
+cleanup() {
+    stop_music
+}
+
+# Set up trap to call cleanup function on script exit
+trap cleanup EXIT
+
 # Function to display the theme selection submenu
 select_theme() {
     clear
@@ -161,12 +197,14 @@ select_theme() {
                 THEME="Squid Game"
                 shapes=("${SQUID_SHAPES[@]}")
                 echo "Theme set to Squid Game!"
+                start_music  # Start the corresponding music
                 return
                 ;;
             2)
                 THEME="Harry Potter"
                 shapes=("${HALLOWS_SHAPES[@]}")
                 echo "Theme set to Harry Potter!"
+                start_music  # Start the corresponding music
                 return
                 ;;
             3)
@@ -193,8 +231,9 @@ display_main_menu() {
 		echo "2) Select Difficulty"
 		echo "3) Select Theme"
 		echo "4) View Records"
-		echo "5) Exit Game"
-        read -p "Enter your choice (1-5): " menu_choice
+		echo "5) View Game Credits"
+		echo "6) Exit Game"
+        read -p "Enter your choice (1-6): " menu_choice
         case $menu_choice in
             1)
                 return 1
@@ -215,8 +254,18 @@ display_main_menu() {
                 echo -e "\nPress Enter to return to the main menu..."
                 read
                 ;;
-            5)
+            5) 
+               clear
+               echo -e "Game credits:\n Tooba Nadeem  23L-2550\n Muhummad Taqi 23F-3026"
+               echo -e "\tFrom: SE-4A"
+               echo -e " Hope you like our game!"
+               echo -e "\nPress Enter to return to the main menu..."
+               read
+               ;;
+            6)
                 echo "Thanks for playing!"
+                # Stop music when the game ends
+                stop_music
                 exit 0
                 ;;
             *)
@@ -244,6 +293,9 @@ play_game() {
     player_score=0
     computer_score=0
     attempts=3
+    
+    # Start the default theme music (Squid Game)
+    start_music
 
     while true; do
         clear
@@ -255,7 +307,7 @@ play_game() {
         
         figlet -f digital "Shape Challenge!"
         echo "Theme: $THEME | Difficulty: $DIFFICULTY - You have $TIME_LIMIT seconds to respond"
-        echo "You have $attempts attempts left to guess the shape."
+        echo "You have $attempts attempt(s) left to guess the shape."
         echo "Available shapes: ${shapes[*]}"
         echo "Type 'exit' at any time to quit the game and return to the main menu."
 
@@ -318,6 +370,8 @@ play_game() {
         # Handle exit request
         if [[ $exit_requested == true ]]; then
             exit_game $player_score $computer_score $attempts
+            # Stop music when the game ends
+            stop_music
             return
         fi
 
@@ -327,7 +381,7 @@ play_game() {
             ((attempts--))
             
             if [[ $attempts -gt 0 ]]; then
-                echo "You have $attempts attempts remaining."
+                echo "You have $attempts attempt(s) remaining."
                 echo "Let's try again with a new shape."
                 continue 
             fi
@@ -373,6 +427,9 @@ play_game() {
             break
         fi
     done
+    
+    # Stop music when the game ends
+    stop_music
 }
 
 # Main program loop
