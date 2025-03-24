@@ -14,8 +14,8 @@ DIFFICULTY="Medium"
 THEME="Squid Game"
 
 # Paths to theme music
-HARRY_POTTER_MUSIC="/home/toobanadeem/harry-potter-hedwigs-theme.mp3"
-SQUID_GAME_MUSIC="/home/toobanadeem/SquidGameBgm.mp3"
+HARRY_POTTER_MUSIC="/home/toobanadeem/game/old/harry-potter-hedwigs-theme.mp3"
+SQUID_GAME_MUSIC="/home/toobanadeem/game/old/SquidGameBgm.mp3"
 
 # Theme-specific shape arrays
 SQUID_SHAPES=("Circle" "Triangle" "Star" "Umbrella")
@@ -154,16 +154,16 @@ start_music() {
     pkill mpg123  > /dev/null 2>&1 # Stop any existing music and supress msgs
     
      # Reset volume to a neutral level before setting theme-specific volume
-    pactl set-sink-volume @DEFAULT_SINK@ 30% 
+    pactl set-sink-volume @DEFAULT_SINK@ 50% 
     
     if [[ "$THEME" == "Harry Potter" ]]; then
-        mpg123 -g --loop -1 "$HARRY_POTTER_MUSIC"> /dev/null 2>&1 &
-        pactl set-sink-volume @DEFAULT_SINK@ 125%  # Increase system volume
+        mpg123 --loop -1 "$HARRY_POTTER_MUSIC"> /dev/null 2>&1 &
+        pactl set-sink-volume @DEFAULT_SINK@ 200%  # Increase system volume
         echo "Playing Harry Potter theme..."
         
     else
-        mpg123 -g --loop -1 "$SQUID_GAME_MUSIC" > /dev/null 2>&1 &
-        pactl set-sink-volume @DEFAULT_SINK@ 30%  # Reset system volume
+        mpg123 --loop -1 "$SQUID_GAME_MUSIC" > /dev/null 2>&1 &
+        pactl set-sink-volume @DEFAULT_SINK@ 50%  # Reset system volume
         echo "Playing Squid Game theme..."
     fi
 }
